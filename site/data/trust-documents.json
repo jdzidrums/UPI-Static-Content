@@ -1,0 +1,33 @@
+{
+  "lastReviewed": "2026-08-21",
+  "documents": [
+    {
+      "id": "soc",
+      "title": "SOC audit materials",
+      "description": "Availability and distribution restrictions must be confirmed by Ultra PRO before release. No certification claim is made by this portal.",
+      "status": "controlled",
+      "statusLabel": "Request access"
+    },
+    {
+      "id": "privacy-gdpr",
+      "title": "Privacy and GDPR materials",
+      "description": "Ultra PRO's public privacy policy is available now. Supplemental questionnaires or approved evidence may be requested for a defined business purpose.",
+      "status": "controlled",
+      "statusLabel": "Request access"
+    },
+    {
+      "id": "security-assessment",
+      "title": "Security assessment materials",
+      "description": "Approved summaries, questionnaires, or test reports are distributed through a controlled review process when available.",
+      "status": "controlled",
+      "statusLabel": "Request access"
+    },
+    {
+      "id": "resilience",
+      "title": "Business continuity and recovery summary",
+      "description": "Current approved continuity, recovery, and support materials may be requested for partner due diligence.",
+      "status": "controlled",
+      "statusLabel": "Request access"
+    }
+  ]
+}
