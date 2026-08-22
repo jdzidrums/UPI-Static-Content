@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPOSITORY="${REPOSITORY:-UltraPRO-Int/UPI-Static-Content}"
+REPOSITORY="${REPOSITORY:-jdzidrums/UPI-Static-Content}"
 AZURE_LOCATION="${AZURE_LOCATION:-westus2}"
 AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rg-upi-static-content-prod}"
 AZURE_WEBAPP_NAME="${AZURE_WEBAPP_NAME:-UPI-Static-Content}"
