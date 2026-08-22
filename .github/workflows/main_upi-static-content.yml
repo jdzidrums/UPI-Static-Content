@@ -1,0 +1,127 @@
+name: Validate and deploy Ultra PRO Partner Integration Portal
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: upi-static-content-production
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24.x'
+  AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME || 'UPI-Static-Content' }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'rg-upi-static-content-prod' }}
+  AZURE_KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
+  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'westus2' }}
+  EDI_SUPPORT_EMAIL: ${{ vars.EDI_SUPPORT_EMAIL || 'edisupport@ultrapro.com' }}
+  BOOKINGS_URL: ${{ vars.BOOKINGS_URL || 'https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/' }}
+  DEPLOYMENT_ENVIRONMENT: production
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build and validate the static site
+        run: npm test
+
+      - name: Create Azure deployment package
+        run: |
+          mkdir -p release
+          cp -R dist/. release/
+          cp package.json server.mjs release/
+          cd release
+          zip -r ../portal-release.zip .
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-portal
+          path: portal-release.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    if: github.event_name != 'pull_request' && vars.DEPLOY_AZURE == 'true'
+    needs: build-and-validate
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out infrastructure files
+        uses: actions/checkout@v4
+
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: partner-portal
+
+      - name: Sign in to Azure with OpenID Connect
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Provision or reconcile Azure resources
+        if: vars.PROVISION_AZURE == 'true'
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment group create \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --template-file infra/main.bicep \
+              --parameters \
+                appName="$AZURE_WEBAPP_NAME" \
+                keyVaultName="$AZURE_KEY_VAULT_NAME" \
+                location="$AZURE_LOCATION" \
+              --only-show-errors
+
+      - name: Verify Key Vault configuration
+        if: env.AZURE_KEY_VAULT_NAME != ''
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az keyvault show \
+              --name "$AZURE_KEY_VAULT_NAME" \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --query '{name:name,rbac:properties.enableRbacAuthorization}' \
+              --output json
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: Production
+          package: portal-release.zip
+
+      - name: Smoke test the deployed site
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            SITE_URL="https://${AZURE_WEBAPP_NAME}.azurewebsites.net"
+          fi
+          curl --fail --silent --show-error --retry 5 --retry-delay 10 "$SITE_URL/" > /dev/null
+          curl --fail --silent --show-error --retry 5 --retry-delay 10 "$SITE_URL/trust.html" > /dev/null
+
+      - name: Sign out of Azure
+        if: always()
+        run: az logout
