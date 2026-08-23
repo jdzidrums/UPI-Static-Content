@@ -20,6 +20,7 @@ env:
   AZURE_KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'westus2' }}
   EDI_SUPPORT_EMAIL: ${{ vars.EDI_SUPPORT_EMAIL || 'edisupport@ultrapro.com' }}
+  SECURITY_SUPPORT_EMAIL: ${{ vars.SECURITY_SUPPORT_EMAIL || 'security@ultrapro.com' }}
   BOOKINGS_URL: ${{ vars.BOOKINGS_URL || 'https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/s/g887hXf47UGAtzwghQraEg2?ismsaljsauthenabled' }}
   ONBOARD_HOSTNAME: ${{ vars.ONBOARD_HOSTNAME || 'onboard.ultrapro.com' }}
   TRUST_HOSTNAME: ${{ vars.TRUST_HOSTNAME || 'trust.ultrapro.com' }}
