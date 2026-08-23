@@ -55,11 +55,28 @@ if (siteKind === "onboard") {
   await forbidPath("trust.html");
   await forbidPath("data/trust-documents.json");
   await forbidPath("audits");
+
+  const onboardIndex = await readFile(join(siteRoot, "index.html"), "utf8");
+  if (!onboardIndex.includes("https://bookings.cloud.microsoft")) {
+    errors.push("index.html: Microsoft Bookings redirect host is missing from the frame-src policy.");
+  }
 }
 
 if (siteKind === "trust") {
   await forbidPath("privacy.html");
   await forbidPath("downloads");
+
+  const trustIndex = await readFile(join(siteRoot, "index.html"), "utf8");
+  if (!trustIndex.includes("security@ultrapro.com")) {
+    errors.push("index.html: Trust Center security contact is missing.");
+  }
+  if (trustIndex.includes("edisupport@ultrapro.com")) {
+    errors.push("index.html: Trust Center must not use the EDI support contact.");
+  }
+  const header = trustIndex.match(/<header\b[\s\S]*?<\/header>/i)?.[0] || "";
+  if (/Integration onboarding/i.test(header)) {
+    errors.push("index.html: Trust Center header must not link to Integration Onboarding.");
+  }
 }
 
 if (errors.length) {

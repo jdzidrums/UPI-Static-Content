@@ -10,6 +10,7 @@ const trustOutputDirectory = join(outputDirectory, "trust");
 
 const configuration = {
   "__EDI_SUPPORT_EMAIL__": process.env.EDI_SUPPORT_EMAIL || "edisupport@ultrapro.com",
+  "__SECURITY_SUPPORT_EMAIL__": process.env.SECURITY_SUPPORT_EMAIL || "security@ultrapro.com",
   "__BOOKINGS_URL__": process.env.BOOKINGS_URL || "https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/s/g887hXf47UGAtzwghQraEg2?ismsaljsauthenabled"
 };
 
@@ -72,11 +73,17 @@ async function writeBuildMetadata(destinationDirectory, site) {
 }
 
 function validateConfiguration(values) {
-  const email = values["__EDI_SUPPORT_EMAIL__"];
+  const ediSupportEmail = values["__EDI_SUPPORT_EMAIL__"];
+  const securitySupportEmail = values["__SECURITY_SUPPORT_EMAIL__"];
   const bookingsUrl = values["__BOOKINGS_URL__"];
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("EDI_SUPPORT_EMAIL must be a valid email address.");
+  for (const [name, email] of [
+    ["EDI_SUPPORT_EMAIL", ediSupportEmail],
+    ["SECURITY_SUPPORT_EMAIL", securitySupportEmail]
+  ]) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error(`${name} must be a valid email address.`);
+    }
   }
 
   const parsedBookingsUrl = new URL(bookingsUrl);

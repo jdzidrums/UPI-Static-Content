@@ -20,6 +20,7 @@ Public configuration can be overridden at build time:
 
 ```sh
 EDI_SUPPORT_EMAIL="edisupport@ultrapro.com" \
+SECURITY_SUPPORT_EMAIL="security@ultrapro.com" \
 BOOKINGS_URL="https://outlook.office.com/book/.../" \
 npm run build
 ```
@@ -29,7 +30,7 @@ npm run build
 - Do not add credentials, certificates, private keys, access tokens, production payloads, customer data, or confidential audit reports to the repository.
 - The trust center is driven by `site/data/trust-documents.json`.
 - A document may be marked `published` only after the approved public file is added under `site/audits/`.
-- Restricted materials stay `controlled` and route requestors to EDI Support. A static site cannot safely enforce an NDA or hide a permanent download credential.
+- Restricted materials stay `controlled` and route requestors to Ultra PRO Security. A static site cannot safely enforce an NDA or hide a permanent download credential.
 - Certification and compliance claims require evidence and approval before publication.
 
 ## GitHub Actions configuration
@@ -54,6 +55,7 @@ GitHub variables:
 | `AZURE_KEY_VAULT_NAME` | Globally unique production Key Vault name |
 | `AZURE_LOCATION` | `westus2` |
 | `EDI_SUPPORT_EMAIL` | `edisupport@ultrapro.com` |
+| `SECURITY_SUPPORT_EMAIL` | `security@ultrapro.com` for Trust Center requests and reporting |
 | `BOOKINGS_URL` | Public Ultra PRO IT Microsoft Bookings URL |
 | `ONBOARD_HOSTNAME` | `onboard.ultrapro.com` |
 | `TRUST_HOSTNAME` | `trust.ultrapro.com` |
@@ -73,7 +75,7 @@ The repository includes `scripts/bootstrap-azure.sh` to create or reuse the Entr
 - Azure Key Vault with RBAC, purge protection, and soft-delete retention; and
 - Key Vault Secrets User access for the App Service managed identity.
 
-The current static portal has no runtime secret. Public values such as the support address and Bookings URL are GitHub variables and are expected to be visible in the deployed HTML. Future runtime credentials must be placed in Key Vault and read server-side through managed identity. Never inject a Key Vault secret into client-side HTML or JavaScript.
+The current static portal has no runtime secret. Public values such as the support addresses and Bookings URL are GitHub variables and are expected to be visible in the deployed HTML. Future runtime credentials must be placed in Key Vault and read server-side through managed identity. Never inject a Key Vault secret into client-side HTML or JavaScript.
 
 ## Deployment flow
 
