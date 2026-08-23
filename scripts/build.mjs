@@ -10,7 +10,7 @@ const trustOutputDirectory = join(outputDirectory, "trust");
 
 const configuration = {
   "__EDI_SUPPORT_EMAIL__": process.env.EDI_SUPPORT_EMAIL || "edisupport@ultrapro.com",
-  "__BOOKINGS_URL__": process.env.BOOKINGS_URL || "https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/"
+  "__BOOKINGS_URL__": process.env.BOOKINGS_URL || "https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/s/g887hXf47UGAtzwghQraEg2?ismsaljsauthenabled"
 };
 
 validateConfiguration(configuration);
