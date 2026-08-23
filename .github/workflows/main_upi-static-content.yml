@@ -13,6 +13,7 @@ concurrency:
 
 env:
   NODE_VERSION: '24.x'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME || 'UPI-Static-Content' }}
   AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'rg-upi-static-content-prod' }}
   AZURE_KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
