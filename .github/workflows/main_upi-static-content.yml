@@ -151,14 +151,26 @@ jobs:
               local thumbprint
               thumbprint="$(az webapp config ssl list --resource-group "$AZURE_RESOURCE_GROUP" --query "[?canonicalName=='${hostname}'].thumbprint | [0]" --output tsv)"
               if [ -z "$thumbprint" ]; then
-                thumbprint="$(az webapp config ssl create \
+                az webapp config ssl create \
                   --resource-group "$AZURE_RESOURCE_GROUP" \
                   --name "$app_name" \
                   --hostname "$hostname" \
                   --certificate-name "$certificate_name" \
-                  --query thumbprint \
-                  --output tsv \
-                  --only-show-errors)"
+                  --output none \
+                  --only-show-errors
+
+                for attempt in $(seq 1 20); do
+                  thumbprint="$(az webapp config ssl list --resource-group "$AZURE_RESOURCE_GROUP" --query "[?canonicalName=='${hostname}'].thumbprint | [0]" --output tsv)"
+                  if [ -n "$thumbprint" ]; then
+                    break
+                  fi
+                  sleep 15
+                done
+              fi
+
+              if [ -z "$thumbprint" ]; then
+                echo "Managed certificate for ${hostname} did not become ready within five minutes."
+                return 1
               fi
 
               az webapp config ssl bind \
