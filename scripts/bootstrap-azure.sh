@@ -7,7 +7,7 @@ AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rg-upi-static-content-prod}"
 AZURE_WEBAPP_NAME="${AZURE_WEBAPP_NAME:-UPI-Static-Content}"
 AZURE_KEY_VAULT_NAME="${AZURE_KEY_VAULT_NAME:?Set AZURE_KEY_VAULT_NAME to a globally unique Key Vault name}"
 EDI_SUPPORT_EMAIL="${EDI_SUPPORT_EMAIL:-edisupport@ultrapro.com}"
-BOOKINGS_URL="${BOOKINGS_URL:-https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/}"
+BOOKINGS_URL="${BOOKINGS_URL:-https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/s/g887hXf47UGAtzwghQraEg2?ismsaljsauthenabled}"
 ENTRA_APP_NAME="${ENTRA_APP_NAME:-github-upi-static-content-prod}"
 
 for command in az gh jq; do
