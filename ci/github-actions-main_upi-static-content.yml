@@ -148,7 +148,7 @@ jobs:
               fi
 
               local thumbprint
-              thumbprint="$(az webapp config ssl list --resource-group "$AZURE_RESOURCE_GROUP" --query "[?canonicalName=='${hostname}'].thumbprint | [0]" --output tsv)"
+              thumbprint="$(az webapp config ssl show --resource-group "$AZURE_RESOURCE_GROUP" --certificate-name "$certificate_name" --query thumbprint --output tsv 2>/dev/null || true)"
               if [ -z "$thumbprint" ]; then
                 az webapp config ssl create \
                   --resource-group "$AZURE_RESOURCE_GROUP" \
@@ -159,7 +159,7 @@ jobs:
                   --only-show-errors
 
                 for attempt in $(seq 1 20); do
-                  thumbprint="$(az webapp config ssl list --resource-group "$AZURE_RESOURCE_GROUP" --query "[?canonicalName=='${hostname}'].thumbprint | [0]" --output tsv)"
+                  thumbprint="$(az webapp config ssl show --resource-group "$AZURE_RESOURCE_GROUP" --certificate-name "$certificate_name" --query thumbprint --output tsv 2>/dev/null || true)"
                   if [ -n "$thumbprint" ]; then
                     break
                   fi
