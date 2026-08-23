@@ -192,10 +192,19 @@ jobs:
             ONBOARD_SITE_URL="https://${ONBOARD_HOSTNAME}"
             TRUST_SITE_URL="https://${TRUST_HOSTNAME}"
           fi
-          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$ONBOARD_SITE_URL/" > /dev/null
-          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$ONBOARD_SITE_URL/privacy.html" > /dev/null
-          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$TRUST_SITE_URL/" > /dev/null
-          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$TRUST_SITE_URL/data/trust-documents.json" > /dev/null
+          probe() {
+            curl --fail --silent --show-error \
+              --retry 30 \
+              --retry-delay 10 \
+              --retry-max-time 300 \
+              --retry-all-errors \
+              "$1" > /dev/null
+          }
+
+          probe "$ONBOARD_SITE_URL/"
+          probe "$ONBOARD_SITE_URL/privacy.html"
+          probe "$TRUST_SITE_URL/"
+          probe "$TRUST_SITE_URL/data/trust-documents.json"
 
       - name: Sign out of Azure
         if: always()
