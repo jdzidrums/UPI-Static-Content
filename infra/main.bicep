@@ -1,8 +1,11 @@
 @description('Azure region for all resources.')
 param location string = resourceGroup().location
 
-@description('Existing or new Azure App Service name.')
+@description('Existing or new Azure App Service name for the integration onboarding site.')
 param appName string
+
+@description('Globally unique Azure App Service name for the Trust Center site.')
+param trustAppName string
 
 @description('Globally unique Key Vault name used for runtime secrets.')
 param keyVaultName string
@@ -86,6 +89,42 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   }
 }
 
+resource trustWebApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: trustAppName
+  location: location
+  kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: plan.id
+    httpsOnly: true
+    clientAffinityEnabled: false
+    siteConfig: {
+      alwaysOn: true
+      ftpsState: 'Disabled'
+      http20Enabled: true
+      linuxFxVersion: 'NODE|24-lts'
+      minTlsVersion: '1.2'
+      appCommandLine: 'node server.mjs'
+      appSettings: [
+        {
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'false'
+        }
+        {
+          name: 'WEBSITE_NODE_DEFAULT_VERSION'
+          value: '~24'
+        }
+        {
+          name: 'KEY_VAULT_URI'
+          value: keyVault.properties.vaultUri
+        }
+      ]
+    }
+  }
+}
+
 var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '4633458b-17de-408a-b874-0445c86b69e6'
@@ -101,6 +140,18 @@ resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01
   }
 }
 
-output appDefaultHostname string = webApp.properties.defaultHostName
-output appPrincipalId string = webApp.identity.principalId
+resource trustKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (assignKeyVaultSecretsUserRole) {
+  name: guid(keyVault.id, trustWebApp.id, keyVaultSecretsUserRoleDefinitionId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: keyVaultSecretsUserRoleDefinitionId
+    principalId: trustWebApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+output onboardAppDefaultHostname string = webApp.properties.defaultHostName
+output onboardAppPrincipalId string = webApp.identity.principalId
+output trustAppDefaultHostname string = trustWebApp.properties.defaultHostName
+output trustAppPrincipalId string = trustWebApp.identity.principalId
 output keyVaultUri string = keyVault.properties.vaultUri
