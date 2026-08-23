@@ -7,6 +7,9 @@ param appName string
 @description('Globally unique Key Vault name used for runtime secrets.')
 param keyVaultName string
 
+@description('Whether this deployment should grant the App Service managed identity Key Vault Secrets User. Keep false for least-privilege CI; assign the role separately when runtime secrets are introduced.')
+param assignKeyVaultSecretsUserRole bool = false
+
 @description('App Service plan name.')
 param appServicePlanName string = '${appName}-plan'
 
@@ -88,7 +91,7 @@ var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId(
   '4633458b-17de-408a-b874-0445c86b69e6'
 )
 
-resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (assignKeyVaultSecretsUserRole) {
   name: guid(keyVault.id, webApp.id, keyVaultSecretsUserRoleDefinitionId)
   scope: keyVault
   properties: {
