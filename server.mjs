@@ -5,7 +5,7 @@ import { dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
-const configuredRoot = process.env.SITE_ROOT ? normalize(process.env.SITE_ROOT) : join(moduleDirectory, "dist");
+const configuredRoot = process.env.SITE_ROOT ? normalize(process.env.SITE_ROOT) : join(moduleDirectory, "dist", "onboard");
 const siteRoot = await exists(join(configuredRoot, "index.html")) ? configuredRoot : moduleDirectory;
 const port = Number(process.env.PORT || 8080);
 
