@@ -66,7 +66,7 @@ server.listen(port, "0.0.0.0", () => {
 });
 
 function applySecurityHeaders(response) {
-  response.setHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-src https://outlook.office.com https://outlook.office365.com; base-uri 'self'; form-action 'self' mailto:; frame-ancestors 'none'; upgrade-insecure-requests");
+  response.setHeader("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; frame-src https://outlook.office.com https://outlook.office365.com https://bookings.cloud.microsoft; base-uri 'self'; form-action 'self' mailto:; frame-ancestors 'none'; upgrade-insecure-requests");
   response.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
