@@ -4,18 +4,29 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const siteRoot = resolve(repositoryRoot, process.argv[2] || "dist");
+const siteKind = process.argv[3] || "onboard";
 const errors = [];
 
-for (const requiredPath of [
+const sharedRequiredPaths = [
   "index.html",
-  "trust.html",
-  "privacy.html",
   "404.html",
   "assets/css/styles.css",
   "assets/js/main.js",
-  "assets/img/ultra-pro-logo-white.png",
-  "data/trust-documents.json"
-]) {
+  "assets/img/ultra-pro-logo-white.png"
+];
+const siteRequiredPaths = siteKind === "trust"
+  ? ["data/trust-documents.json", "audits/README.txt"]
+  : [
+      "privacy.html",
+      "downloads/Ultra-PRO-EDI-API-Integration-Onboarding-Workflow.docx",
+      "downloads/Ultra-PRO-EDI-API-Integration-Onboarding-Workflow.pdf"
+    ];
+
+if (!["onboard", "trust"].includes(siteKind)) {
+  errors.push(`Unknown site kind: ${siteKind}.`);
+}
+
+for (const requiredPath of [...sharedRequiredPaths, ...siteRequiredPaths]) {
   await requireFile(requiredPath);
 }
 
@@ -38,20 +49,40 @@ for (const absolutePath of files) {
   }
 }
 
-await validateTrustManifest();
+if (siteKind === "trust") await validateTrustManifest();
+
+if (siteKind === "onboard") {
+  await forbidPath("trust.html");
+  await forbidPath("data/trust-documents.json");
+  await forbidPath("audits");
+}
+
+if (siteKind === "trust") {
+  await forbidPath("privacy.html");
+  await forbidPath("downloads");
+}
 
 if (errors.length) {
   console.error("Site validation failed:\n" + errors.map((error) => `- ${error}`).join("\n"));
   process.exit(1);
 }
 
-console.log(`Validated ${files.length} files in ${siteRoot}`);
+console.log(`Validated ${siteKind} site (${files.length} files) in ${siteRoot}`);
 
 async function requireFile(relativePath) {
   try {
     await access(join(siteRoot, relativePath));
   } catch {
     errors.push(`Missing required file: ${relativePath}`);
+  }
+}
+
+async function forbidPath(relativePath) {
+  try {
+    await access(join(siteRoot, relativePath));
+    errors.push(`Site boundary violation: ${relativePath} must not be present in the ${siteKind} site.`);
+  } catch {
+    // Expected: the other site's content must not be packaged here.
   }
 }
 
