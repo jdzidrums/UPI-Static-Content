@@ -1,6 +1,9 @@
-# Ultra PRO Partner Integration Portal
+# Ultra PRO Partner Integration and Trust Sites
 
-Partner-facing onboarding information for Ultra PRO EDI, API, and managed file integrations. The site covers the process from first contact through production rollout and includes the Ultra PRO IT Microsoft Bookings experience, timeline guidance, integration examples, privacy guidance, and a controlled trust-document library.
+Two independently packaged and deployed websites:
+
+- `onboard.ultrapro.com` provides partner-facing onboarding information for Ultra PRO EDI, API, and managed file integrations, including Microsoft Bookings, timeline guidance, integration examples, and workflow downloads.
+- `trust.ultrapro.com` provides the standalone Ultra PRO Trust Center and its controlled certification, audit, privacy, and due-diligence document library.
 
 ## Local development
 
@@ -11,7 +14,7 @@ npm test
 npm start
 ```
 
-`npm test` builds `site/` into `dist/` and validates required files, local links, configuration tokens, trust-document references, and common credential patterns. `npm start` serves `dist/` on `http://localhost:8080` by default.
+`npm test` builds separate packages in `dist/onboard/` and `dist/trust/`. Validation enforces the site boundary: onboarding packages cannot contain Trust Center documents, and Trust Center packages cannot contain onboarding workflow downloads. `npm start` serves `dist/onboard/` on `http://localhost:8080` by default; set `SITE_ROOT=dist/trust` to serve the Trust Center locally.
 
 Public configuration can be overridden at build time:
 
@@ -45,13 +48,16 @@ GitHub variables:
 
 | Name | Example / purpose |
 |---|---|
-| `AZURE_WEBAPP_NAME` | `UPI-Static-Content` |
+| `AZURE_ONBOARD_WEBAPP_NAME` | App Service for `onboard.ultrapro.com`; defaults to the existing integration app |
+| `AZURE_TRUST_WEBAPP_NAME` | App Service for `trust.ultrapro.com` |
 | `AZURE_RESOURCE_GROUP` | `rg-upi-static-content-prod` |
 | `AZURE_KEY_VAULT_NAME` | Globally unique production Key Vault name |
 | `AZURE_LOCATION` | `westus2` |
 | `EDI_SUPPORT_EMAIL` | `edisupport@ultrapro.com` |
 | `BOOKINGS_URL` | Public Ultra PRO IT Microsoft Bookings URL |
-| `SITE_URL` | Optional custom domain used by the deployment smoke test |
+| `ONBOARD_HOSTNAME` | `onboard.ultrapro.com` |
+| `TRUST_HOSTNAME` | `trust.ultrapro.com` |
+| `CONFIGURE_CUSTOM_DOMAINS` | Set to `true` after both Azure DNS CNAME records resolve; binds the hostnames and provisions managed TLS certificates |
 | `PROVISION_AZURE` | Set to `true` to reconcile `infra/main.bicep` before deployment |
 | `DEPLOY_AZURE` | Set to `true` after Azure secrets are configured to enable production deployment |
 
@@ -61,7 +67,7 @@ The repository includes `scripts/bootstrap-azure.sh` to create or reuse the Entr
 
 `infra/main.bicep` defines:
 
-- Linux Azure App Service running Node.js 24;
+- two Linux Azure App Services running Node.js 24 on one shared App Service plan;
 - HTTPS-only configuration, TLS 1.2 minimum, HTTP/2, FTPS disabled, and a hardened static server;
 - a system-assigned managed identity;
 - Azure Key Vault with RBAC, purge protection, and soft-delete retention; and
@@ -75,8 +81,9 @@ The current static portal has no runtime secret. Public values such as the suppo
 2. A merge to `main` rebuilds the exact deployment artifact; Azure deployment runs only when `DEPLOY_AZURE=true`.
 3. GitHub requests a short-lived Azure token through OIDC.
 4. If `PROVISION_AZURE=true`, Bicep reconciles App Service, managed identity, and Key Vault.
-5. The zip package deploys to the Production slot.
-6. The workflow smoke-tests the home page and trust center.
+5. Independent zip packages deploy to the onboarding and Trust Center Production slots.
+6. When `CONFIGURE_CUSTOM_DOMAINS=true`, the workflow reconciles both custom hostnames and Azure-managed TLS certificates.
+7. The workflow smoke-tests both sites and site-specific resources.
 
 The workflow follows current Microsoft guidance to use OIDC for GitHub-to-Azure authentication and managed identity for App Service-to-Key Vault access.
 
