@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDirectory = join(repositoryRoot, "site");
 const outputDirectory = join(repositoryRoot, "dist");
+const onboardOutputDirectory = join(outputDirectory, "onboard");
+const trustOutputDirectory = join(outputDirectory, "trust");
 
 const configuration = {
   "__EDI_SUPPORT_EMAIL__": process.env.EDI_SUPPORT_EMAIL || "edisupport@ultrapro.com",
@@ -14,25 +16,60 @@ const configuration = {
 validateConfiguration(configuration);
 
 await rm(outputDirectory, { recursive: true, force: true });
-await mkdir(outputDirectory, { recursive: true });
-await cp(sourceDirectory, outputDirectory, { recursive: true });
-await replaceTokens(outputDirectory);
+await Promise.all([
+  buildOnboardSite(),
+  buildTrustSite()
+]);
 
-await writeFile(
-  join(outputDirectory, "build.json"),
-  JSON.stringify(
-    {
-      builtAt: new Date().toISOString(),
-      gitSha: process.env.GITHUB_SHA || "local",
-      environment: process.env.DEPLOYMENT_ENVIRONMENT || "local"
-    },
-    null,
-    2
-  ) + "\n",
-  "utf8"
-);
+console.log(`Built onboarding site in ${onboardOutputDirectory}`);
+console.log(`Built trust center in ${trustOutputDirectory}`);
 
-console.log(`Built partner portal in ${outputDirectory}`);
+async function buildOnboardSite() {
+  await mkdir(onboardOutputDirectory, { recursive: true });
+  await Promise.all([
+    copyPath("index.html", onboardOutputDirectory),
+    copyPath("privacy.html", onboardOutputDirectory),
+    copyPath("404.html", onboardOutputDirectory),
+    copyPath("assets", onboardOutputDirectory),
+    copyPath("downloads", onboardOutputDirectory)
+  ]);
+  await replaceTokens(onboardOutputDirectory);
+  await writeBuildMetadata(onboardOutputDirectory, "onboard");
+}
+
+async function buildTrustSite() {
+  await mkdir(trustOutputDirectory, { recursive: true });
+  await Promise.all([
+    cp(join(sourceDirectory, "trust.html"), join(trustOutputDirectory, "index.html")),
+    cp(join(sourceDirectory, "trust-404.html"), join(trustOutputDirectory, "404.html")),
+    copyPath("assets", trustOutputDirectory),
+    copyPath("data", trustOutputDirectory),
+    copyPath("audits", trustOutputDirectory)
+  ]);
+  await replaceTokens(trustOutputDirectory);
+  await writeBuildMetadata(trustOutputDirectory, "trust");
+}
+
+async function copyPath(relativePath, destinationDirectory) {
+  await cp(join(sourceDirectory, relativePath), join(destinationDirectory, relativePath), { recursive: true });
+}
+
+async function writeBuildMetadata(destinationDirectory, site) {
+  await writeFile(
+    join(destinationDirectory, "build.json"),
+    JSON.stringify(
+      {
+        site,
+        builtAt: new Date().toISOString(),
+        gitSha: process.env.GITHUB_SHA || "local",
+        environment: process.env.DEPLOYMENT_ENVIRONMENT || "local"
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+}
 
 function validateConfiguration(values) {
   const email = values["__EDI_SUPPORT_EMAIL__"];

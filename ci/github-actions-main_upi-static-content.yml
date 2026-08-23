@@ -13,12 +13,15 @@ concurrency:
 
 env:
   NODE_VERSION: '24.x'
-  AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME || 'UPI-Static-Content' }}
+  AZURE_ONBOARD_WEBAPP_NAME: ${{ vars.AZURE_ONBOARD_WEBAPP_NAME || vars.AZURE_WEBAPP_NAME || 'upi-partner-integrations-jdz-prod' }}
+  AZURE_TRUST_WEBAPP_NAME: ${{ vars.AZURE_TRUST_WEBAPP_NAME || 'upi-trust-center-jdz-prod' }}
   AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'rg-upi-static-content-prod' }}
   AZURE_KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
   AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'westus2' }}
   EDI_SUPPORT_EMAIL: ${{ vars.EDI_SUPPORT_EMAIL || 'edisupport@ultrapro.com' }}
   BOOKINGS_URL: ${{ vars.BOOKINGS_URL || 'https://outlook.office.com/book/Gf5423982311f4b3ab05454634c0d6b7a@ultrapro.com/' }}
+  ONBOARD_HOSTNAME: ${{ vars.ONBOARD_HOSTNAME || 'onboard.ultrapro.com' }}
+  TRUST_HOSTNAME: ${{ vars.TRUST_HOSTNAME || 'trust.ultrapro.com' }}
   DEPLOYMENT_ENVIRONMENT: production
 
 jobs:
@@ -41,17 +44,23 @@ jobs:
 
       - name: Create Azure deployment package
         run: |
-          mkdir -p release
-          cp -R dist/. release/
-          cp package.json server.mjs release/
-          cd release
-          zip -r ../portal-release.zip .
+          mkdir -p release-onboard release-trust
+          cp -R dist/onboard/. release-onboard/
+          cp package.json server.mjs release-onboard/
+          cp -R dist/trust/. release-trust/
+          cp package.json server.mjs release-trust/
+          cd release-onboard
+          zip -r ../onboard-release.zip .
+          cd ../release-trust
+          zip -r ../trust-release.zip .
 
       - name: Upload deployment package
         uses: actions/upload-artifact@v4
         with:
-          name: partner-portal
-          path: portal-release.zip
+          name: partner-sites
+          path: |
+            onboard-release.zip
+            trust-release.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -71,7 +80,7 @@ jobs:
       - name: Download deployment package
         uses: actions/download-artifact@v4
         with:
-          name: partner-portal
+          name: partner-sites
 
       - name: Sign in to Azure with OpenID Connect
         uses: azure/login@v2
@@ -89,7 +98,8 @@ jobs:
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --template-file infra/main.bicep \
               --parameters \
-                appName="$AZURE_WEBAPP_NAME" \
+                appName="$AZURE_ONBOARD_WEBAPP_NAME" \
+                trustAppName="$AZURE_TRUST_WEBAPP_NAME" \
                 keyVaultName="$AZURE_KEY_VAULT_NAME" \
                 location="$AZURE_LOCATION" \
               --only-show-errors
@@ -105,22 +115,74 @@ jobs:
               --query '{name:name,rbac:properties.enableRbacAuthorization}' \
               --output json
 
-      - name: Deploy to Azure App Service
+      - name: Deploy integration onboarding site
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-name: ${{ env.AZURE_ONBOARD_WEBAPP_NAME }}
           slot-name: Production
-          package: portal-release.zip
+          package: onboard-release.zip
+
+      - name: Deploy Trust Center site
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_TRUST_WEBAPP_NAME }}
+          slot-name: Production
+          package: trust-release.zip
+
+      - name: Configure custom domains and managed TLS
+        if: vars.CONFIGURE_CUSTOM_DOMAINS == 'true'
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            configure_domain() {
+              local app_name="$1"
+              local hostname="$2"
+              local certificate_name="${app_name}-managed"
+
+              if [ "$(az webapp config hostname list --resource-group "$AZURE_RESOURCE_GROUP" --webapp-name "$app_name" --query "[?name=='${hostname}'] | length(@)" --output tsv)" = "0" ]; then
+                az webapp config hostname add \
+                  --resource-group "$AZURE_RESOURCE_GROUP" \
+                  --webapp-name "$app_name" \
+                  --hostname "$hostname" \
+                  --only-show-errors
+              fi
+
+              local thumbprint
+              thumbprint="$(az webapp config ssl list --resource-group "$AZURE_RESOURCE_GROUP" --query "[?canonicalName=='${hostname}'].thumbprint | [0]" --output tsv)"
+              if [ -z "$thumbprint" ]; then
+                thumbprint="$(az webapp config ssl create \
+                  --resource-group "$AZURE_RESOURCE_GROUP" \
+                  --name "$app_name" \
+                  --hostname "$hostname" \
+                  --certificate-name "$certificate_name" \
+                  --query thumbprint \
+                  --output tsv \
+                  --only-show-errors)"
+              fi
+
+              az webapp config ssl bind \
+                --resource-group "$AZURE_RESOURCE_GROUP" \
+                --name "$app_name" \
+                --certificate-thumbprint "$thumbprint" \
+                --ssl-type SNI \
+                --only-show-errors
+            }
+
+            configure_domain "$AZURE_ONBOARD_WEBAPP_NAME" "$ONBOARD_HOSTNAME"
+            configure_domain "$AZURE_TRUST_WEBAPP_NAME" "$TRUST_HOSTNAME"
 
       - name: Smoke test the deployed site
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
         run: |
-          if [ -z "$SITE_URL" ]; then
-            SITE_URL="https://${AZURE_WEBAPP_NAME}.azurewebsites.net"
+          ONBOARD_SITE_URL="https://${AZURE_ONBOARD_WEBAPP_NAME}.azurewebsites.net"
+          TRUST_SITE_URL="https://${AZURE_TRUST_WEBAPP_NAME}.azurewebsites.net"
+          if [ "${{ vars.CONFIGURE_CUSTOM_DOMAINS }}" = "true" ]; then
+            ONBOARD_SITE_URL="https://${ONBOARD_HOSTNAME}"
+            TRUST_SITE_URL="https://${TRUST_HOSTNAME}"
           fi
-          curl --fail --silent --show-error --retry 5 --retry-delay 10 "$SITE_URL/" > /dev/null
-          curl --fail --silent --show-error --retry 5 --retry-delay 10 "$SITE_URL/trust.html" > /dev/null
+          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$ONBOARD_SITE_URL/" > /dev/null
+          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$ONBOARD_SITE_URL/privacy.html" > /dev/null
+          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$TRUST_SITE_URL/" > /dev/null
+          curl --fail --silent --show-error --retry 8 --retry-delay 10 "$TRUST_SITE_URL/data/trust-documents.json" > /dev/null
 
       - name: Sign out of Azure
         if: always()
