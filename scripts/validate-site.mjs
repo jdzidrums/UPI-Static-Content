@@ -74,6 +74,13 @@ if (siteKind === "onboard") {
   if (!onboardIndex.includes("https://bookings.cloud.microsoft")) {
     errors.push("index.html: Microsoft Bookings redirect host is missing from the frame-src policy.");
   }
+  const onboardSectionHeadings = [...onboardIndex.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)];
+  if (onboardSectionHeadings.some((match) => /edisupport@ultrapro\.com/i.test(match[1]))) {
+    errors.push("index.html: EDI support email must not be rendered as a section heading.");
+  }
+  if (!onboardIndex.includes('class="section-heading__email"')) {
+    errors.push("index.html: responsive EDI support email link is missing from the introduction.");
+  }
   validateSocialMetadata(onboardIndex, {
     canonicalUrl: "https://onboard.ultrapro.com/",
     imageUrl: "https://onboard.ultrapro.com/assets/img/social/onboard-og-1200x630.png"
