@@ -21,14 +21,28 @@ const siteRequiredPaths = siteKind === "trust"
       "downloads/Ultra-PRO-EDI-API-Integration-Onboarding-Workflow.docx",
       "downloads/Ultra-PRO-EDI-API-Integration-Onboarding-Workflow.pdf"
     ];
+const socialPrefix = siteKind === "trust" ? "trust" : "onboard";
+const socialRequiredPaths = [
+  `assets/img/social/${socialPrefix}-og-1200x630.png`,
+  `assets/img/social/${socialPrefix}-linkedin-1200x627.png`,
+  `assets/img/social/${socialPrefix}-x-1600x900.png`,
+  `assets/img/social/${socialPrefix}-square-1080x1080.png`
+];
 
 if (!["onboard", "trust"].includes(siteKind)) {
   errors.push(`Unknown site kind: ${siteKind}.`);
 }
 
-for (const requiredPath of [...sharedRequiredPaths, ...siteRequiredPaths]) {
+for (const requiredPath of [...sharedRequiredPaths, ...siteRequiredPaths, ...socialRequiredPaths]) {
   await requireFile(requiredPath);
 }
+
+await Promise.all([
+  validatePngDimensions(`assets/img/social/${socialPrefix}-og-1200x630.png`, 1200, 630),
+  validatePngDimensions(`assets/img/social/${socialPrefix}-linkedin-1200x627.png`, 1200, 627),
+  validatePngDimensions(`assets/img/social/${socialPrefix}-x-1600x900.png`, 1600, 900),
+  validatePngDimensions(`assets/img/social/${socialPrefix}-square-1080x1080.png`, 1080, 1080)
+]);
 
 const files = await walk(siteRoot);
 for (const absolutePath of files) {
@@ -60,6 +74,10 @@ if (siteKind === "onboard") {
   if (!onboardIndex.includes("https://bookings.cloud.microsoft")) {
     errors.push("index.html: Microsoft Bookings redirect host is missing from the frame-src policy.");
   }
+  validateSocialMetadata(onboardIndex, {
+    canonicalUrl: "https://onboard.ultrapro.com/",
+    imageUrl: "https://onboard.ultrapro.com/assets/img/social/onboard-og-1200x630.png"
+  });
 }
 
 if (siteKind === "trust") {
@@ -77,6 +95,10 @@ if (siteKind === "trust") {
   if (/Integration onboarding/i.test(header)) {
     errors.push("index.html: Trust Center header must not link to Integration Onboarding.");
   }
+  validateSocialMetadata(trustIndex, {
+    canonicalUrl: "https://trust.ultrapro.com/",
+    imageUrl: "https://trust.ultrapro.com/assets/img/social/trust-og-1200x630.png"
+  });
 }
 
 if (errors.length) {
@@ -100,6 +122,46 @@ async function forbidPath(relativePath) {
     errors.push(`Site boundary violation: ${relativePath} must not be present in the ${siteKind} site.`);
   } catch {
     // Expected: the other site's content must not be packaged here.
+  }
+}
+
+async function validatePngDimensions(relativePath, expectedWidth, expectedHeight) {
+  try {
+    const image = await readFile(join(siteRoot, relativePath));
+    const pngSignature = "89504e470d0a1a0a";
+    if (image.length < 24 || image.subarray(0, 8).toString("hex") !== pngSignature) {
+      errors.push(`${relativePath}: is not a valid PNG file.`);
+      return;
+    }
+
+    const width = image.readUInt32BE(16);
+    const height = image.readUInt32BE(20);
+    if (width !== expectedWidth || height !== expectedHeight) {
+      errors.push(`${relativePath}: expected ${expectedWidth}x${expectedHeight}, found ${width}x${height}.`);
+    }
+  } catch {
+    // Missing files are reported by requireFile.
+  }
+}
+
+function validateSocialMetadata(html, { canonicalUrl, imageUrl }) {
+  const requiredFragments = [
+    `<link rel="canonical" href="${canonicalUrl}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:url" content="${canonicalUrl}">`,
+    `<meta property="og:image" content="${imageUrl}">`,
+    `<meta property="og:image:width" content="1200">`,
+    `<meta property="og:image:height" content="630">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:image" content="${imageUrl}">`,
+    `"image": "${imageUrl}"`,
+    `"url": "${canonicalUrl}"`
+  ];
+
+  for (const fragment of requiredFragments) {
+    if (!html.includes(fragment)) {
+      errors.push(`index.html: social preview metadata is missing ${fragment}.`);
+    }
   }
 }
 
