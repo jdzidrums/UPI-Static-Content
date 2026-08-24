@@ -538,6 +538,21 @@ select {
   font-size: clamp(2.55rem, 5.2vw, 4.75rem);
 }
 
+.section-heading__email {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 18px;
+  color: var(--red-dark);
+  font-family: var(--font-condensed);
+  font-size: clamp(1.15rem, 2.2vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
 .section--dark .section-heading h2,
 .section--trust .section-heading h2 {
   color: var(--white);
