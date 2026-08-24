@@ -33,6 +33,19 @@ npm run build
 - Restricted materials stay `controlled` and route requestors to Ultra PRO Security. A static site cannot safely enforce an NDA or hide a permanent download credential.
 - Certification and compliance claims require evidence and approval before publication.
 
+## Social preview collection
+
+Each site has a branded set under `site/assets/img/social/`, with the approved Ultra PRO logo composited into every image:
+
+| Filename suffix | Size | Intended use |
+|---|---:|---|
+| `og-1200x630.png` | 1200 × 630 | Automatic Open Graph link preview for Microsoft Teams, Facebook, LinkedIn, Slack, and other unfurl clients |
+| `linkedin-1200x627.png` | 1200 × 627 | LinkedIn native image or Page-post override |
+| `x-1600x900.png` | 1600 × 900 | X and other widescreen social posts |
+| `square-1080x1080.png` | 1080 × 1080 | Square social feeds and manual Teams post attachments |
+
+The root pages emit canonical, Open Graph, X card, and Schema.org metadata with absolute production URLs. Link-preview metadata uses the broadly compatible 1200 × 630 image; the alternate sizes are available for direct post creation.
+
 ## GitHub Actions configuration
 
 The replacement deployment workflow is maintained at `ci/github-actions-main_upi-static-content.yml`. Install it as `.github/workflows/main_upi-static-content.yml` using a GitHub credential with Actions workflow-write permission. The deployment uses Microsoft Entra workload identity federation (OIDC); it does not use a publish profile or a long-lived Azure client secret.
